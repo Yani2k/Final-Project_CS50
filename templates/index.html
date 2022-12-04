@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block title %}
+  Index Page
+{% endblock %}
+{% block main %}
+
+  <p class="spacer"></p>
+
+  {% if session["user_id"] %}
+    <div>
+      <a class="btn btn-primary btn-light" href="#" role="button">Ranked Game</a>
+    </div>
+    <div>
+      <a class="btn btn-primary btn-light" href="#" role="button">Friendly Game</a>
+    </div>
+    <div>
+      <a class="btn btn-primary btn-light" href="#" role="button">Game with a Friend</a>
+    </div>
+
+  {% else %}
+    <div class="centered">
+      <a class="btn btn-primary btn-light big" href="#" role="button">Game with a bot</a>
+    </div>
+    <div class="centered big">
+      <h3>To get more play options create a free accout!</h3>
+    </div>
+  {% endif %}
+  <p class="spacer"></p>
+  
+{% endblock %}
+
+  <!-- <footer class="mb-5 small text-center text-muted">
+    <a href="https://benjdd.com/courses/cs110/fall-2018/pas/bulls_and_cows/res/bulls_and_cows.png">IEX</a>
+</footer> -->
+
+  <!-- <div class="footer icon"></div> -->
+
+
+</body>
+</html>

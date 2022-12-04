@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}
+Apology
+{% endblock %}
+{% block main %}
+
+<img alt="{{ top }}" class="border img-fluid middle-image" src="https://api.memegen.link/images/disastergirl/{{ top | urlencode }}/{{ bottom | urlencode }}.png&width=400" title="{{ top }}">
+
+{% endblock %}

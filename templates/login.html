@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}
+Log-in
+{% endblock %}
+{% block main %}
+
+  <form action="/login" method="post">
+    <div class="mb-3">
+      <input autofocus autocomplete="off" class="form-control mx-auto w-auto" name="username_or_email" placeholder="Username or E-Mail" required type="text">
+    </div>
+    <div class="mb-3">
+      <input type="password" class="form-control mx-auto w-auto" required name="password" placeholder="Password" id="password">
+    </div>
+    <button type="submit" class="btn btn-primary">Log in</button>
+    <span></span>
+    <div class="mb-3">
+        <p>
+          <a href="{{ url_for('reset_password_request') }}">Forgotten Password?</a>
+      </p>
+    </div>
+  </form>
+
+{% endblock %}
