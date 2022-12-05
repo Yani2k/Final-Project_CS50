@@ -173,6 +173,9 @@ def reset_password_request():
 
 @app.route('/reset_password/<username>/<token>', methods=['GET', 'POST'])
 def reset_password(username, token):
+  
+  # I should check somehow if someone is not tempering with my urls
+  
   if request.method == "GET":
     verification_success = verify_reset_password_token(token)
     if not verification_success:
@@ -205,3 +208,20 @@ def reset_password(username, token):
 @app.route("/about")
 def about():
     return render_template("about.html")
+  
+  
+@app.route("/in_game/<type>")
+def create_game(type):  
+  # get id for the next game from games database
+  game_id = 0
+  return in_game(game_id, type)
+
+
+def in_game(game_id, type):
+  if type == 'pb':
+    render_template("with_a_friend.html", game_id=game_id)
+  elif type == 'friendly':
+    render_template("friendly_ingame.html", game_id=game_id)
+  elif type == 'ranked':
+    render_template("ranked_ingame.html", game_id=game_id)
+  return apology("something went wrong", 403)

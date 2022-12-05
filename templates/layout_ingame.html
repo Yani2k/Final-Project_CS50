@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block script %}
+<script>
+  window.onbeforeunload = function(){
+    return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
+  }
+</script>
+{% endblock %}
+{% block title %}
+
+{% endblock %}
+{% block main %}
+{% endblock %}

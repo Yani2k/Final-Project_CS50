@@ -8,13 +8,13 @@
 
   {% if session["user_id"] %}
     <div>
-      <a class="btn btn-primary btn-light" href="#" role="button">Ranked Game</a>
+      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='ranked') }}" role="button">Ranked Game</a>
     </div>
     <div>
-      <a class="btn btn-primary btn-light" href="#" role="button">Friendly Game</a>
+      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='friendly') }}" role="button">Friendly Game</a>
     </div>
     <div>
-      <a class="btn btn-primary btn-light" href="#" role="button">Game with a Friend</a>
+      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='pb') }}" role="button">Game with a Friend</a>
     </div>
 
   {% else %}
