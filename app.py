@@ -17,12 +17,7 @@ app = Flask(__name__)
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
-
-# # Configure the secret key for the encryption of the socket
-# app.config["SECRET_KEY"] = config("SECRET_KEY")
-# socketio = SocketIO(app)
-# socketio.run(app)
+Session(app)    
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #configuring mail settings
@@ -36,6 +31,29 @@ app.config["MAIL_USERNAME"] = config("MAIL_USERNAME")
 mail = Mail(app)
 
 db = SQL("sqlite:///database.db")
+
+
+# Configure the secret key for the encryption of the socket
+app.config["SECRET_KEY"] = config("SECRET_KEY")
+socketio = SocketIO(app)
+socketio.run(app)
+# socketio.init_app(app, cors_allowed_origins="*")
+
+@socketio.on('connect')
+# Shouldn't be on the first connect that apparently happens as the user enters the server but as the client emits an event that the user has went to the ingame page
+def connect(socket):
+  # So in the end both users will have to be logged in
+  # Or maybe this can be for ranked only
+  last_active_game = db.execute("SELECT * FROM games ORDER BY ID DESC LIMIT 1")
+  elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"]) 
+  if not last_active_game[0]["player2_id"]:
+    pass
+  # update the database and join that room
+    
+  else:
+    db.execute("INSERT INTO games (player1_id, player1_elo) VALUES (?, ?)", session["user_id"], elo[0]["elo"])
+      
+    
 
 # a helping function that's not in helpers cause it needs current session information
 def get_reset_password_token(username, expires_in=600):
@@ -174,7 +192,10 @@ def reset_password_request():
 @app.route('/reset_password/<username>/<token>', methods=['GET', 'POST'])
 def reset_password(username, token):
   
-  # I should check somehow if someone is not tempering with my urls
+  # checking if someone is tempering with url parameters
+  person = db.execute("SELECT * FROM user WHERE username = ?", username)
+  if len(person) == 0:
+    return apology("wrong url", 403)
   
   if request.method == "GET":
     verification_success = verify_reset_password_token(token)
@@ -193,8 +214,6 @@ def reset_password(username, token):
       return apology("Passwords don't match", 400)
     
     db.execute("UPDATE user SET hash = (?) WHERE username = (?)", generate_password_hash(new_password), username)
-    
-    person = db.execute("SELECT * FROM user WHERE username = ?", username)
     
     # if we're resetting the password through the email, then we surely have an email 
     # associated with the account
