@@ -9,3 +9,5 @@ SELECT * FROM user;
 -- DELETE FROM user;
 
 CREATE TABLE games (game_id INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT NOT NULL, player1_id INTEGER, player1_elo SMALLINT, player2_id INTEGER, player2_elo SMALLINT, winner_id INTEGER, time DATETIME);
+
+ALTER TABLE games ADD game_type TEXT;

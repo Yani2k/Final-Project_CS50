@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, session, request, redirect, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 # from datetime import datetime
-from helpers import apology, login_required, rating
+from helpers import apology, login_required, rating, give_room
 from flask_session import Session
 from cs50 import SQL
 from pyisemail import is_email
@@ -39,39 +39,21 @@ socketio = SocketIO(app)
 socketio.run(app)
 # socketio.init_app(app, cors_allowed_origins="*")
 
-@socketio.on('connect_to_room')
-# TODO: Shouldn't be on the first connect that apparently happens as the user enters the server but as the client emits an event that the user has went to the ingame page
-def connect_to_room(socket):
-  # So in the end both users will have to be logged in
-  # Or maybe this can be for ranked only
-  # I can check if the user is logged on and then if not just 
-  # give them the alo of 800 and an id of -1 that won't clash with any other ids
-  # or i can do some ip shit and give them something according to their ip 
-  # but that seems more difficult
-  last_active_game = db.execute("SELECT * FROM games ORDER BY ID DESC LIMIT 1")
-  last_room = last_active_game[0]["game_id"];
-  if session.get("user_id") is None:
-    # Do i try to save them somehow for history of unlogged games or nah
-    # But how can you want to access your games when you werent logged
-    # If one of them was logged they can access the game
-    if not last_active_game[0]["player2_id"]:
-      db.execute("UPDATE games SET player2_id = -1, player2_elo = 800 WHERE game_id = ?", last_room)
-      join_room(last_room)
-      emit('join', to=last_room)
-    else:
-      db.execute("INSERT INTO games (player1_id, player1_elo) VALUES (-1, 800)")
-      join_room(last_room + 1)
-      emit('join', to=last_room + 1)
-  else:
-    elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"]) 
-    if not last_active_game[0]["player2_id"]:
-      db.execute("UPDATE games SET player2_id = ?, player2_elo = ? WHERE game_id = ?", session["user_id"], elo[0]["elo"], last_room) 
-      join_room(last_room) 
-      emit('join', to=last_room)          
-    else:
-      db.execute("INSERT INTO games (player1_id, player1_elo) VALUES (?, ?)", session["user_id"], elo[0]["elo"])
-      join_room(last_room + 1)
-      emit('join', to=last_room + 1)
+socketio.on("join_ranked")
+def on_join_ranked():
+  print("On join ranked")
+  
+socketio.on("join_friendly")
+def on_join_friendly():
+  print("On join friendly")
+  
+socketio.on("join_withfriend")
+def on_join_withfriend():
+  print("On join with friend")
+  
+socketio.on("join_bot")
+def on_join_bot():
+  print("On join bot")
       
 
 # a helping function that's not in helpers cause it needs current session information

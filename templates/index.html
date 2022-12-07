@@ -1,4 +1,35 @@
 {% extends "layout.html" %}
+{% block script %}
+<script>
+  var socket = io();
+  
+  document.addEventListener("DOMContentLoaded", function(){
+    
+    let rankedgame = document.querySelector("#ranked");
+    rankedgame.addEventListener("click", function(){
+      // socket.emit('join_game', {game_type: ranked})
+      socket.emit("join_ranked");
+    });
+    
+    let friendlygame = document.querySelector("#friendly");
+    friendlygame.addEventListener("click", function(){
+      socket.emit("join_friendly");
+    });
+    
+    let withfriend = document.querySelector("#with_friend");
+    withfriend.addEventListener("click", function(){
+      socket.emit("join_withfriend");
+    });
+    
+    var botgame = document.querySelector("bot");
+    botgame.addEventListener("click", function(){
+      socket.emit("join_bot");
+    });
+  });
+
+
+</script>
+{% endblock %}
 {% block title %}
   Index Page
 {% endblock %}
@@ -8,18 +39,18 @@
 
   {% if session["user_id"] %}
     <div>
-      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='ranked') }}" role="button">Ranked Game</a>
+      <button class="btn btn-primary btn-light" id="ranked">Ranked Game</button>
     </div>
     <div>
-      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='friendly') }}" role="button">Friendly Game</a>
+      <button class="btn btn-primary btn-light" id="friendly">Friendly Game</button>
     </div>
     <div>
-      <a class="btn btn-primary btn-light" href="{{ url_for('create_game', type='pb') }}" role="button">Game with a Friend</a>
+      <button class="btn btn-primary btn-light" id="with_friend">Game with a Friend</button>
     </div>
 
   {% else %}
     <div class="centered">
-      <a class="btn btn-primary btn-light big" href="#" role="button">Game with a bot</a>
+      <button class="btn btn-primary btn-light big" id="bot">Game with a bot</button>
     </div>
     <div class="centered big">
       <h3>To get more play options create a free accout!</h3>
