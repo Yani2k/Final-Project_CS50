@@ -36,24 +36,44 @@ db = SQL("sqlite:///database.db")
 # Configure the secret key for the encryption of the socket
 app.config["SECRET_KEY"] = config("SECRET_KEY")
 socketio = SocketIO(app)
-socketio.run(app)
+
 # socketio.init_app(app, cors_allowed_origins="*")
 
-socketio.on("join_ranked")
+@socketio.on('join_ranked')
 def on_join_ranked():
   print("On join ranked")
+  room = give_room('ranked', db)
+  join_room(room)
+  game_url = url_for('in_game', game_id=room, type='ranked')
+  emit('game_link', {'url': game_url})
   
-socketio.on("join_friendly")
+@socketio.on('join_friendly')
 def on_join_friendly():
   print("On join friendly")
+  room = give_room('friendly', db)
+  join_room(room)
+  game_url = url_for('in_game', game_id=room, type='friendly')
+  emit('game_link', {'url': game_url})
   
-socketio.on("join_withfriend")
-def on_join_withfriend():
+@socketio.on('join_with_friend')
+def on_join_with_friend():
   print("On join with friend")
+  last_active_game = db.execute("SELECT * FROM games ORDER BY game_id DESC LIMIT 1")
+  elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"])
+  db.execute("INSERT INTO games (player1_id, player1_elo, game_type) VALUES (?, ?, ?)", session["user_id"], elo[0]["elo"], 'with_friend')
   
-socketio.on("join_bot")
+  room = last_active_game[0]['game_id'] + 1
+  join_room(room)
+  game_url = url_for('in_game', game_id=room, type='with_friend')
+  emit('game_link', {'url': game_url, "clipboard": True})
+  
+@socketio.on('join_bot')
 def on_join_bot():
   print("On join bot")
+  room = give_room('bot', db)
+  join_room(room)
+  game_url = url_for('in_game', game_id=room, type='bot')
+  emit('game_link', {'url': game_url})
       
 
 # a helping function that's not in helpers cause it needs current session information
@@ -230,13 +250,7 @@ def about():
     return render_template("about.html")
   
   
-@app.route("/in_game/<type>")
-def create_game(type):  
-  # get id for the next game from games database
-  game_id = 0
-  return in_game(game_id, type)
-
-
+@app.route("/in_game/<type>/<game_id>")
 def in_game(game_id, type):
   if type == 'pb':
     render_template("with_a_friend.html", game_id=game_id)
@@ -245,3 +259,7 @@ def in_game(game_id, type):
   elif type == 'ranked':
     render_template("ranked_ingame.html", game_id=game_id)
   return apology("something went wrong", 403)
+
+
+if __name__ == "__main__":
+  socketio.run(app)

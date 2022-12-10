@@ -50,7 +50,7 @@ def rating(ratingW, ratingL, K):
 
 
 def give_room(game_type, db):
-  last_active_game = db.execute("SELECT * FROM games WHERE game_type = ? ORDER BY ID DESC LIMIT 1", game_type)
+  last_active_game = db.execute("SELECT * FROM games WHERE game_type = ? ORDER BY game_id DESC LIMIT 1", game_type)
   last_room = last_active_game[0]["game_id"];
   if session.get("user_id") is None:
     # Check if unlogged players are trying to play ranked somewhere 
