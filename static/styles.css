@@ -68,7 +68,7 @@ li {
 }
 
 span {
-  margin-top: 1em; 
+  margin-top: 1.5em; 
   display: block;
 }
 
@@ -76,4 +76,12 @@ span {
   width: 60%;
   margin: auto;
   word-wrap: break-word;
+}
+
+.tiny_letters {
+  font-size: 10px;
+}
+
+li {
+  display: inline-block;
 }

@@ -11,7 +11,12 @@
 
   <link href="/static/styles.css" rel="stylesheet">
 
-  {% block script %} {% endblock %}  
+
+  {% block script %} 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+  {% endblock %}  
 
   <title>{% block title %}{% endblock %}</title>
 
@@ -32,7 +37,7 @@
       <li class="nav-item">
         <a class="nav-link text-dark" href="#">Leaderboard</a>
       </li>
-      {% if session["user_id"] %}
+      {% if session["user_id"] and session["user_id"] != -1 %}
         <li class="nav-item dropdown ms-auto">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           {{session["user_username"]}}

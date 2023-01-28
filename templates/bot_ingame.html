@@ -1,3 +1,5 @@
+<!-- Starting from copy paste from layout_ingame.html cause idk how to divide the js with the
+template inheritance -->
 {% extends "layout.html" %}
 {% block script %}
 {{ super() }}
@@ -9,12 +11,10 @@
 
     var socket = io.connect("http://127.0.0.1:5000");
 
-    var haveNumberFromSid = 0;
-
     var button = document.querySelector('#button');
     var text = document.querySelector('#text');
     var number = document.querySelector('#num');
-    
+
     button.disabled = true;
 
     number.onkeydown = function() {
@@ -25,41 +25,36 @@
         // if the user deletes a character, then there wouldn't be 4 numbers so we disable to button.
     };
 
-    var sid = 0;
+    socket.on('guess_result_bot', (data) => {
+      // alert("Entering guess_result_bot");
+      console.log(data);
+      if ('game_over' in data){
+        if (data['user_won'] == 'True')
+          alert("Congratulations! You have guessed the bot's number and won the game!");
+        else
+          alert("The bot has guessed your number - " + data['number'] + " and you have lost the game");
+        window.onbeforeunload = null;
+        window.location.replace("{{ url_for('home') }}");// does this work like this
+      }
+      else {
+        text.innerHTML = "Put your guess for the bot's number.";
+        num.disabled = false;
+        var bot_history = document.createElement('li');
+        bot_history.appendChild(document.createTextNode("Bot guess: " + data['bot_guess'] + " - " + data['bot_guess_bulls'] + " Bulls and " + data['bot_guess_cows'] + " Cows"));
+        document.querySelector('#bot_history').appendChild(bot_history);
 
-    socket.on('get_sid', (data) =>{
-      sid = data['sid'];
-      console.log('sid is ' + sid);
+        var user_history = document.createElement('li');
+        user_history.appendChild(document.createTextNode("Your guess: " + data['user_guess'] + " - " + data['user_guess_bulls'] + " Bulls and " + data['user_guess_cows'] + " Cows"));
+        document.querySelector('#user_history').appendChild(user_history);
+      }
     });
-
-    socket.on('game_over', (data) =>{
-      if (data['winner_sid'] == sid)
-        alert("Congratulations! You have guessed your opponent's number and won the game!");
-      else 
-        alert("Your opponent has guessed your number and you have lost the game.");
-      window.onbeforeunload = null;
-      window.location.replace("{{ url_for('home') }}");
-    });
-
-
-    socket.on('guess_result', (data) =>{
-      text.innerHTML = "Input your guess for your opponent's number.";
-      num.disabled = false;
-      var opponent_history = document.createElement('li');
-      opponent_history.appendChild(document.createTextNode("Opponent guess: " + data['opponent_guess'] + " - " + data['opponent_guess_bulls'] + " Bulls and " + data['opponent_guess_cows'] + " Cows"));
-      document.querySelector('#opponent_history').appendChild(opponent_history);
-
-      var user_history = document.createElement('li');
-      user_history.appendChild(document.createTextNode("Your guess: " + data['user_guess'] + " - " + data['user_guess_bulls'] + " Bulls and " + data['user_guess_cows'] + " Cows"));
-      document.querySelector('#user_history').appendChild(user_history);
-    });    
+  
 
 
     button.addEventListener('click', function(){
-      // The unary plus (+) coerces its operand into a number
       let num = number.value;
       number.value = "";
-      let textToChangeTo = "Input your guess for your opponent's number.";
+      let textToChangeTo = "Put your guess for the bot's number.";
       // if we have changed the text from the inital text 
       // then that means we have submitted the first number already
       let first ="";
@@ -68,17 +63,19 @@
         text.innerHTML = textToChangeTo;
       }
       else{
-        text.innerHTML = "You have a few second to think while your opponent makes their guess.";
+        text.innerHTML = "You have a few second to think while the bot makes his guess.";
         num.disabled = true;
       }
       button.disabled = true;
       alert("Emitting number_received event");
-      socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'False'});
+      socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'True'});
+
     });
   });
 
   function validateNum(e) {
-
+    //get current numbers written in the input field
+    
     var keynum;
     
     if(window.event) { // IE                  
@@ -115,14 +112,29 @@
   <div class="row">
     <div class="col">
       <span></span>
-      <h4> History of your opponent's guesses:</h4>
-      <ol id="opponent_history"></ol>
+      <h4> History of the bots guesses:</h4>
+      <!-- I can make it a table too and add table rows with the html if i think it'd look better -->
+      <ol id="bot_history"></ol>
+      <!-- {% if bot_guess_history|length > 0 %}
+      <table class="table-light">
+        <tbody>
+          {% for guesses in bot_guess_history %}
+            <td class="table-light">Bot Guess : {{ guesses['guess'] }}</td>
+            <td class="table-light">{{ guesses['bulls'] }} Bulls</td>
+            <td class="table-light">{{ guesses['cows'] }} Cows</td>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %} -->
     </div>
     <div class="col-7">
       <div id="choosing-numbers">
         <h3 id="text">Choose you number. It must be a 4 digit number with no dublicating digits. Leading zeros are allowed.</h3>
         <span></span>
         <input id="num" type="text" minlength="4" maxlength="4" required autocomplete="off" onkeypress="return validateNum(event)">
+        <!-- Even with these safety nets here, i should still check the value in
+        the server, cause these checks can be bypassed
+        by some on-site  html changing-->
         <button type="button" id="button">Submit</button>
         <p id="space"></p>
       </div>

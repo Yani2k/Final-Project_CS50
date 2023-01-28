@@ -5,7 +5,7 @@ from flask import g, request, redirect, url_for, render_template, session
 def login_required(f):
   @wraps(f)
   def decorated_function(*args, **kwargs):
-    if session.get("user_id") is None:
+    if session.get('user_id') is None:
       return redirect(url_for('login'))
     return f(*args, **kwargs)
   return decorated_function
@@ -48,7 +48,7 @@ def rating(ratingW, ratingL, K):
   
   return new_elo
 
-
+# used for ranked and for friendly games
 def give_room(game_type, db):
   last_active_game = db.execute("SELECT * FROM games WHERE game_type = ? ORDER BY game_id DESC LIMIT 1", game_type)
   last_room = last_active_game[0]["game_id"];
@@ -68,3 +68,11 @@ def give_room(game_type, db):
     else:
       db.execute("INSERT INTO games (player1_id, player1_elo, game_type) VALUES (?, ?, ?)", session["user_id"], elo[0]["elo"], game_type)
       return last_room + 1
+    
+# returns a list of two numbers
+# the first being the number of bulls
+# the second the number of cows
+def calculate_bulls_cows(guess, selected):
+  bulls = sum(p == s for p, s in zip(guess, selected))
+  cows = sum(p in selected for p in guess)
+  return [bulls, cows - bulls]
