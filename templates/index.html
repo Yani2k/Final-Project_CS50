@@ -34,7 +34,7 @@
     if (withfriend){
       withfriend.addEventListener("click", function(){
         alert("Game with a friend!");
-        socket.emit("join_withfriend");
+        socket.emit("join_with_friend");
       });
     }
     
@@ -62,10 +62,10 @@
       <button class="btn btn-primary btn-light" id="ranked">Ranked Game</button>
     </div>
     <div>
-      <button class="btn btn-primary btn-light" id="friendly">Friendly Game<small class="tiny_letters">(Link for the game will be copied </small> <p class="tiny_letters">clipboard. Send the link to a friend and have them join your)</p></button>
+      <button class="btn btn-primary btn-light" id="friendly">Friendly Game</button>
     </div>
     <div>
-      <button class="btn btn-primary btn-light" id="with_friend">Game with a Friend</button>
+      <button class="btn btn-primary btn-light" id="with_friend">Game with a Friend<small class="tiny_letters">(Link for the game will be copied </small> <p class="tiny_letters">clipboard. Send the link to a friend and have them join your)</p></button>
     </div>
     <div class="centered">
       <button class="btn btn-primary btn-light big bot">Game with a bot</button>

@@ -1,7 +1,6 @@
 from functools import wraps
 from flask import g, request, redirect, url_for, render_template, session
 
-
 def login_required(f):
   @wraps(f)
   def decorated_function(*args, **kwargs):
@@ -49,25 +48,34 @@ def rating(ratingW, ratingL, K):
   return new_elo
 
 # used for ranked and for friendly games
+# here we have a session['game_id'] definted for certain
 def give_room(game_type, db):
-  last_active_game = db.execute("SELECT * FROM games WHERE game_type = ? ORDER BY game_id DESC LIMIT 1", game_type)
-  last_room = last_active_game[0]["game_id"];
-  if session.get("user_id") is None:
-    # Check if unlogged players are trying to play ranked somewhere 
-    if not last_active_game[0]["player2_id"]:
-      db.execute("UPDATE games SET player2_id = -1, player2_elo = 800 WHERE game_id = ?", last_room)
+  last_active_game = db.execute("SELECT * FROM games WHERE game_type = ? ORDER BY gameid_of_gametype DESC LIMIT 1", game_type)
+  # tuka zaduljitelno imame user_id
+  elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"])
+  last_room = 0
+      
+  # so that we have a way to start it up
+  if len(last_active_game) != 0:
+    last_room = last_active_game[0]["gameid_of_gametype"]
+    socket_room = db.execute("SELECT * FROM socket_rooms WHERE room_id = ?", last_active_game[0]['game_id'])
+    # on user disconnect we delete the socket
+    # we can't delete the game on disconnect cause we want to delete only games not fired
+    # but keep the finished games where the user disconnects after starting the game
+    if len(socket_room) == 0:
+      db.execute("DELETE FROM games WHERE game_id = ?", last_active_game[0]['game_id'])
+      db.execute("INSERT INTO games (player1_id, player1_elo, game_type, gameid_of_gametype) VALUES (?, ?, ?, ?)", session["user_id"], elo[0]["elo"], game_type, last_room)
       return last_room
-    else:
-      db.execute("INSERT INTO games (player1_id, player1_elo, game_type) VALUES (-1, 800, game_type)")
-      return last_room + 1
+    
+  if len(last_active_game) != 0 and not last_active_game[0]["player2_id"]:
+      db.execute("UPDATE games SET player2_id = ?, player2_elo = ? WHERE gameid_of_gametype = ? AND game_type = ?", session["user_id"], elo[0]["elo"], last_room, game_type)     
   else:
-    elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"]) 
-    if not last_active_game[0]["player2_id"]:
-      db.execute("UPDATE games SET player2_id = ?, player2_elo = ? WHERE game_id = ?", session["user_id"], elo[0]["elo"], last_room) 
-      return last_room          
-    else:
-      db.execute("INSERT INTO games (player1_id, player1_elo, game_type) VALUES (?, ?, ?)", session["user_id"], elo[0]["elo"], game_type)
-      return last_room + 1
+    last_room += 1
+    db.execute("INSERT INTO games (player1_id, player1_elo, game_type, gameid_of_gametype) VALUES (?, ?, ?, ?)", session["user_id"], elo[0]["elo"], game_type, last_room)
+      
+  return last_room
+      
+  
     
 # returns a list of two numbers
 # the first being the number of bulls

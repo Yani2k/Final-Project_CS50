@@ -43,8 +43,8 @@
           {{session["user_username"]}}
           </a> 
           <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item" href="#">Profile</a></li>           
-            <li><a class="dropdown-item" href="#">Friends</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('profile', user_id=16) }}">Profile</a></li>           
+            <li><a class="dropdown-item" href="{{ url_for('friend_list') }}">Friends</a></li>
             <li><a class="dropdown-item" href="#">Messages</a></li>
             <li><a class="dropdown-item" href="#">Game History</a></li>
             <li><a class="dropdown-item" href="{{ url_for('logout') }}">Log Out</a></li>

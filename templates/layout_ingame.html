@@ -3,18 +3,26 @@
 {{ super() }}
 <script>
   document.addEventListener("DOMContentLoaded", function(){
-    window.onbeforeunload = function(){
-      return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
-    }
 
     var socket = io.connect("http://127.0.0.1:5000");
-
-    var haveNumberFromSid = 0;
-
+    
+    window.onbeforeunload = function(){
+      socket.emit("player disconnected");
+      console.log("player disconnected emitting");
+      return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
+    }
+    
     var button = document.querySelector('#button');
     var text = document.querySelector('#text');
     var number = document.querySelector('#num');
-    
+    var waiting = document.querySelector('#waiting');
+    var cont = document.querySelector('#container')
+    cont.style.display = 'none';
+
+
+    // for checking if it's the first number given by the player
+    var first ="";
+
     button.disabled = true;
 
     number.onkeydown = function() {
@@ -25,55 +33,89 @@
         // if the user deletes a character, then there wouldn't be 4 numbers so we disable to button.
     };
 
-    var sid = 0;
 
-    socket.on('get_sid', (data) =>{
-      sid = data['sid'];
-      console.log('sid is ' + sid);
+    socket.on('connect', () =>{
+      // alert('connection event');
+      socket.emit("Get numbers of players");
+    });
+
+    socket.on('disconnect', () =>{
+      console.log("player disconnected emitting");
+      socket.emit('player disconnected');
+      // maybe i just can't emit anything in the disconnnect event cause by the time it fired the connection has been nulled
+    });
+
+    socket.on("numbers selected", (data) =>{
+      alert('numbers selected');
+      if (data['sid of the second'] == socket.id){
+        text.innerHTML = "Numbers have been selected. Your opponent starts first.";
+      }
+      else {
+        number.disabled = false;
+        text.innerHTML = "Numbers have been selected. You start first. Make your guess for your opponent's number";
+      }
+    });
+
+    socket.on('game_start', () =>{
+      alert("Changing the display values");
+      cont.style.display = 'block';
+      waiting.style.display = 'none';
     });
 
     socket.on('game_over', (data) =>{
-      if (data['winner_sid'] == sid)
+      if (data['winner_sid'] == socket.id)
         alert("Congratulations! You have guessed your opponent's number and won the game!");
-      else 
+      else {
+        // a little strange that on the loser nothing get's alerted but overall great
         alert("Your opponent has guessed your number and you have lost the game.");
+      }
       window.onbeforeunload = null;
       window.location.replace("{{ url_for('home') }}");
     });
 
 
     socket.on('guess_result', (data) =>{
-      text.innerHTML = "Input your guess for your opponent's number.";
-      num.disabled = false;
-      var opponent_history = document.createElement('li');
-      opponent_history.appendChild(document.createTextNode("Opponent guess: " + data['opponent_guess'] + " - " + data['opponent_guess_bulls'] + " Bulls and " + data['opponent_guess_cows'] + " Cows"));
-      document.querySelector('#opponent_history').appendChild(opponent_history);
-
-      var user_history = document.createElement('li');
-      user_history.appendChild(document.createTextNode("Your guess: " + data['user_guess'] + " - " + data['user_guess_bulls'] + " Bulls and " + data['user_guess_cows'] + " Cows"));
-      document.querySelector('#user_history').appendChild(user_history);
+      if(data['result_from_sid'] == socket.id){
+        text.innerHTML = "You have a few second to think while your opponent makes their guess.";
+        number.disabled = true;
+        button.disabled = true; 
+        var user_history = document.createElement('li');
+        user_history.appendChild(document.createTextNode("Your guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
+        document.querySelector('#user_history').appendChild(user_history);
+      }
+      else {
+        text.innerHTML = "Input your guess for your opponent's number.";
+        number.disabled = false;
+        var opponent_history = document.createElement('li');
+        opponent_history.appendChild(document.createTextNode("Opponent's guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
+        document.querySelector('#opponent_history').appendChild(opponent_history);
+      }
     });    
 
-
     button.addEventListener('click', function(){
-      // The unary plus (+) coerces its operand into a number
       let num = number.value;
       number.value = "";
-      let textToChangeTo = "Input your guess for your opponent's number.";
       // if we have changed the text from the inital text 
       // then that means we have submitted the first number already
-      let first ="";
-      if (text.innerHTML != textToChangeTo){
+
+      console.log(first);
+      // this is a bit of a weird way to do it but its what i thought of and i 
+      // can't seem to think of anything better rn
+      if (first != "First number"){
         first = "First number";
-        text.innerHTML = textToChangeTo;
+        text.innerHTML = "Wait for your opponent to select their number";
+        button.disabled = true;  
+        number.disabled = true;
+        socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'False'});
       }
+
       else{
         text.innerHTML = "You have a few second to think while your opponent makes their guess.";
-        num.disabled = true;
+        button.disabled = true;
+        number.disabled = true;
+        socket.emit('number_received', {'number': num, 'first': 'Not First'});
       }
-      button.disabled = true;
-      alert("Emitting number_received event");
-      socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'False'});
+
     });
   });
 
@@ -111,7 +153,13 @@
 {% block title %}
 {% endblock %}
 {% block main %}
-<div class="container text-center">
+
+<button id="waiting" class="btn btn-primary" type="button">
+  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+  Waiting for a second player...
+</button>
+
+<div id="container" class="container text-center">
   <div class="row">
     <div class="col">
       <span></span>

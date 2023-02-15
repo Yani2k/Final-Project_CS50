@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block title %}
+User Profile
+{% endblock %}
+{% block main %}
+
+<p> Username: {{ elo[0]['username'] }}</p>
+<p> Elo: {{ elo[0]['elo'] }}</p>
+<!-- if somehow the connection is lost here and we lose the session idk. Won't happpen though -->
+{% if user_id != session['user_id'] %}
+  {% if friends == 0 %}
+    <form action="/user/{{ user_id }}" method="post">
+      <input type = "hidden" name = "add_or_remove" value = "add" />
+      <button class="btn btn-primary" type="submit">Add friend.</button>
+    </form>
+  {% elif friends == 1 %}
+  <form action="/user/{{ user_id }}" method="post">
+    <input type = "hidden" name = "add_or_remove" value = "remove" />
+    <button class="btn btn-primary" type="submit">Already friends. Remove.</button>
+  </form>
+  {% endif %}
+{% endif %}
+
+
+<table>
+  <thead>
+    <tr>
+      <th> First player </th>
+      <th> First player elo </th>
+      <th> Second player </th>
+      <th> Second player Elo</th>
+      <th> Winner </th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for game in data %}
+    <tr>
+      <td>{{ game['username1'] }}</td>
+      <td>{{ game['elo1'] }}</td>
+      <!-- if the game hasn't fired it will give a mistake cause there won't be a second player, just like it gives a mistake when there hasn't been a recorded winner -->
+      <td>{{ game['username2'] }} </td>
+      <td>{{ game['elo2'] }}</td>
+      {% if game['winner_id'] %}
+      <td><a href="{{ url_for('profile', user_id=game['winners_id']) }}"> {{ game['winner_username'] }}</a></td>
+      {% else %}
+      <td> No winner recorded.</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+    <!-- {% for game in games %}
+    <tr>
+      <th> {{ game['player1_id'] }} </th>
+      <th> {{ game['player1_elo'] }} </th>
+      {% if game['player2_id'] == 0 %}
+      <th> Bot. </th>
+      {% else %}
+      <th> {{ game['player2_id'] }} </th>
+      {% endif %}
+      <th> {{ game['player2_elo'] }} </th>
+      {% if game['winner_id'] %}
+      <th><a href="{{ url_for('profile', user_id=game['winner_id']) }}">Profile</a></th>
+      {% else %}
+      <th> No winner recorded.</th>
+      {% endif %}
+      <!- <th><a href="{{ url_for('profile', user_id=game['player1_id']) }}">Profile</a></th>  -->
+      <!-- maybe because not all games have winner_ids thats why it'd give an error -->
+      <!-- so yeah it seems thats where it came fron. Confusing for a good minute, like why
+      wasn't it able to build my urls, but now we know that's why 
+      It's a decent solution for now, but it should be made so that every game gets a winner recorded at the end
+      maybe only some very unusual cases->
+    </tr>
+    {% endfor %} -->
+  </tbody>
+</table>
+{% endblock %}
