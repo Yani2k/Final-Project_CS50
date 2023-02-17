@@ -43,8 +43,8 @@ def rating(ratingW, ratingL, K = 20):
 
   new_elo = {}
   
-  new_elo["EloW"] = ratingW
-  new_elo["EloL"] = ratingL
+  new_elo["EloW"] = round(ratingW, 2)
+  new_elo["EloL"] = round(ratingL, 2)
   
   return new_elo
 
@@ -70,7 +70,7 @@ def give_room(game_type, db):
     
   if len(last_active_game) != 0 and not last_active_game[0]["player2_id"]:
     
-    if(last_active_game[0]['player1_id'] = session['user_id']):
+    if(last_active_game[0]['player1_id'] == session['user_id']):
       return -1
       # a flag that something is wrong
     

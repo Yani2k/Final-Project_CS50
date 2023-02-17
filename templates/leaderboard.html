@@ -18,7 +18,7 @@
       {% for leader in leaders %}
         <tr>
           <td> <a href="{{ url_for('profile', user_id=leader['id']) }}">{{ leader['username'] }}</a></td>
-          <td> {{ leader['elo'] }} </td>
+          <td> {{ leader['elo']|round(2) }} </td>
         </tr>
       {% endfor %}
     </tbody>

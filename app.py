@@ -241,14 +241,21 @@ def on_number_received(data):
         # session.pop('game_id', None)
         if session['game_type'] == 'ranked':
           game = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
+          print("ranked game over")
           if game[0]['player1_id'] == session['user_id']:
             new_elo = rating(game[0]['player1_elo'], game[0]['player2_elo'])
+            print('Updating the elo')
             db.execute("UPDATE games SET winner_id = ?, player1_elo = ?, player2_elo = ? WHERE game_type = ? AND gameid_of_gametype = ?", session['user_id'], new_elo['EloW'], new_elo['EloL'], session['game_type'], session['game_id'])
+            db.execute("UPDATE user SET elo = ? WHERE id = ?", new_elo['EloW'], session['user_id'])
+            db.execute("UPDATE user SET elo = ? WHERE id = ?", new_elo['EloL'], game[0]['player2_id'])
             emit('game_over', {'winner_sid': request.sid, 'elo_won': new_elo['EloW'] - game[0]['player1_elo'], 'elo_lost': game[0]['player2_elo'] - new_elo['EloL']}, to=room[0]['game_id'])
             
           elif game[0]['player2_id'] == session['user_id']:
             new_elo = rating(game[0]['player2_elo'], game[0]['player1_elo'])
+            print("updating elo 2")
             db.execute("UPDATE games SET winner_id = ?, player1_elo = ?, player2_elo = ? WHERE game_type = ? AND gameid_of_gametype = ?", session['user_id'], new_elo['EloL'], new_elo['EloW'], session['game_type'], session['game_id'])
+            db.execute("UPDATE user SET elo = ? WHERE id = ?", new_elo['EloW'], session['user_id'])
+            db.execute("UPDATE user SET elo = ? WHERE id = ?", new_elo['EloL'], game[0]['player1_id'])
             emit('game_over', {'winner_sid': request.sid, 'elo_won': new_elo['EloW'] - game[0]['player2_elo'], 'elo_lost': game[0]['player1_elo'] - new_elo['EloL']}, to=room[0]['game_id'])
             
         else:
@@ -267,7 +274,7 @@ def on_number_received(data):
 @socketio.on('join_ranked')
 def on_join_ranked():
   room = give_room('ranked', db)
-  if room = -1:
+  if room == -1:
     # the flag went off
     return apology("Cannot play ranked vs yourself", 400)
   session['game_id'] = room
@@ -281,7 +288,7 @@ def on_join_ranked():
 def on_join_friendly():
   print("On join friendly")
   room = give_room('friendly', db)
-  if room = -1:
+  if room == -1:
     return apology("Cannot play friendly vs yourself", 400)
 
   session['game_id'] = room
@@ -479,14 +486,15 @@ def register():
       # check the validity of the email address
       if not is_email(email, check_dns=True):
         return apology("invalid email address", 400)
+      
+      row_email = db.execute("SELECT * FROM user WHERE email = ?", email)
+      if len(row_email) == 1:
+        return apology("Email is taken", 400)
 
     row_username = db.execute("SELECT * FROM user WHERE username = ?", username)
     if len(row_username) == 1:
       return apology("Username is taken", 400)
-
-    row_email = db.execute("SELECT * FROM user WHERE email = ?", email)
-    if len(row_email) == 1:
-      return apology("Email is taken", 400)
+    
     
     db.execute("INSERT INTO user (username, hash, email, elo) VALUES (?, ?, ?, ?)", username, generate_password_hash(password), email, starting_elo)
     

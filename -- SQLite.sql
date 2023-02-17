@@ -10,6 +10,9 @@ SELECT * FROM user;
 
 CREATE TABLE games (game_id INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT NOT NULL, player1_id INTEGER, player1_elo SMALLINT, player2_id INTEGER, player2_elo SMALLINT, winner_id INTEGER, time DATETIME);
 
+-- Why am i having the elo also in the games table???
+-- Probably shouldn't have it 
+
 ALTER TABLE games ADD game_type TINYTEXT;
 
 ALTER TABLE games ADD player1_num VARCHAR(5);
