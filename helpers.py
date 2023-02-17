@@ -1,5 +1,6 @@
 from functools import wraps
 from flask import g, request, redirect, url_for, render_template, session
+from datetime import datetime
 
 def login_required(f):
   @wraps(f)
@@ -31,7 +32,7 @@ def probability(rating1, rating2):
 
 # passing the ratings of the winner and the loser
 # or to pass the game dictionary since it is mutable
-def rating(ratingW, ratingL, K):
+def rating(ratingW, ratingL, K = 20):
   # probability the winner had to win
   PW = probability(ratingW, ratingL)
   # probability the loser had to lose
@@ -42,8 +43,8 @@ def rating(ratingW, ratingL, K):
 
   new_elo = {}
   
-  new_elo["EloP1"] = ratingW
-  new_elo["ELoP2"] = ratingL
+  new_elo["EloW"] = ratingW
+  new_elo["EloL"] = ratingL
   
   return new_elo
 
@@ -68,7 +69,12 @@ def give_room(game_type, db):
       return last_room
     
   if len(last_active_game) != 0 and not last_active_game[0]["player2_id"]:
-      db.execute("UPDATE games SET player2_id = ?, player2_elo = ? WHERE gameid_of_gametype = ? AND game_type = ?", session["user_id"], elo[0]["elo"], last_room, game_type)     
+    
+    if(last_active_game[0]['player1_id'] = session['user_id']):
+      return -1
+      # a flag that something is wrong
+    
+    db.execute("UPDATE games SET player2_id = ?, player2_elo = ?, time = ? WHERE gameid_of_gametype = ? AND game_type = ?", session["user_id"], elo[0]["elo"], datetime.now(), last_room, game_type)     
   else:
     last_room += 1
     db.execute("INSERT INTO games (player1_id, player1_elo, game_type, gameid_of_gametype) VALUES (?, ?, ?, ?)", session["user_id"], elo[0]["elo"], game_type, last_room)

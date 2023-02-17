@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block title %}
+  Leaderboard
+{% endblock %}
+{% block main %}
+  <h2>Leaderboard</h2>
+  <h3>Top 5 ranked players!</h3>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th> Player </th>
+        <th> Elo </th>
+        <!-- <th> Registered on/Player since </th> -->
+      </tr>
+    </thead>
+    <tbody>
+      {% for leader in leaders %}
+        <tr>
+          <td> <a href="{{ url_for('profile', user_id=leader['id']) }}">{{ leader['username'] }}</a></td>
+          <td> {{ leader['elo'] }} </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

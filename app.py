@@ -11,6 +11,7 @@ from decouple import config
 from time import time
 import jwt
 from flask_socketio import SocketIO, send, emit, rooms, join_room, leave_room
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -49,12 +50,18 @@ def get_players():
   print(request.sid)
   print(session)
   full = False
-  room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", session['game_id'])
+  room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
   join_room(room[0]['game_id'])
   socket_room = db.execute("SELECT * FROM socket_rooms WHERE room_id = ?", room[0]['game_id'])
   if len(socket_room) == 0:
     db.execute("INSERT INTO socket_rooms (player1, player1_id, room_id) VALUES (1, ?, ?)", session['user_id'], room[0]['game_id'])
   else:
+    if socket_room[0]['player1_id'] == session['game_id']:
+      # what things should be deleted here and whatnot
+      # but we already delete shit before, here we'll happen to come only on the with friends games
+      # Where there isn't anything else to delete
+      return apology("Cannot play versus yourself!", 400)
+    
     full = True
     db.execute("UPDATE socket_rooms SET player2 = 1, player2_id = ? WHERE room_id = ?", session['user_id'], room[0]['game_id'])
       
@@ -86,7 +93,7 @@ def get_players():
 def on_player_disconnected():
   # maybe here it will work out ...
   print("on player disconnected")
-  # room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", session['game_id'])
+  # room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", session['game_id']) here needs to be added also game_type if we ever come back to it
   # to_clear = db.execute("SELECT * FROM socket_rooms WHERE room_id = ?", room[0]['game_id'])
   # if len(to_clear) == 1:
   #   db.execute("DELETE FROM socket_rooms WHERE room_id = ?", room[0]['game_id'])
@@ -139,7 +146,7 @@ def on_number_received(data):
       game = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
       if game[0]['player1_num'] and game[0]['player2_num']:
         print("we should be emitting the numbers selected event")
-        socket_room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", session['game_id'])
+        socket_room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
         emit("numbers selected", {'sid of the second': request.sid}, to=socket_room[0]['game_id'])
   else:
     # we already have the selection set
@@ -232,8 +239,24 @@ def on_number_received(data):
       if result[0] == 4:
         # this gets cleared in the disconnect
         # session.pop('game_id', None)
-        
-        emit('game_over', {'winner_sid': request.sid}, to=room[0]['game_id'])
+        if session['game_type'] == 'ranked':
+          game = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
+          if game[0]['player1_id'] == session['user_id']:
+            new_elo = rating(game[0]['player1_elo'], game[0]['player2_elo'])
+            db.execute("UPDATE games SET winner_id = ?, player1_elo = ?, player2_elo = ? WHERE game_type = ? AND gameid_of_gametype = ?", session['user_id'], new_elo['EloW'], new_elo['EloL'], session['game_type'], session['game_id'])
+            emit('game_over', {'winner_sid': request.sid, 'elo_won': new_elo['EloW'] - game[0]['player1_elo'], 'elo_lost': game[0]['player2_elo'] - new_elo['EloL']}, to=room[0]['game_id'])
+            
+          elif game[0]['player2_id'] == session['user_id']:
+            new_elo = rating(game[0]['player2_elo'], game[0]['player1_elo'])
+            db.execute("UPDATE games SET winner_id = ?, player1_elo = ?, player2_elo = ? WHERE game_type = ? AND gameid_of_gametype = ?", session['user_id'], new_elo['EloL'], new_elo['EloW'], session['game_type'], session['game_id'])
+            emit('game_over', {'winner_sid': request.sid, 'elo_won': new_elo['EloW'] - game[0]['player2_elo'], 'elo_lost': game[0]['player1_elo'] - new_elo['EloL']}, to=room[0]['game_id'])
+            
+        else:
+          db.execute("UPDATE games SET winner_id = ? WHERE game_type = ? AND gameid_of_gametype = ?", session['user_id'], session['game_type'], session['game_id'])
+          emit('game_over', {'winner_sid': request.sid}, to=room[0]['game_id'])
+          
+        session.pop('game_id', None)
+        session.pop('game_type', None)
       else:
         emit('guess_result', {'result_from_sid': request.sid, 'bulls': result[0], 'cows': result[1]}, to=room[0]['game_id'])
         
@@ -244,6 +267,9 @@ def on_number_received(data):
 @socketio.on('join_ranked')
 def on_join_ranked():
   room = give_room('ranked', db)
+  if room = -1:
+    # the flag went off
+    return apology("Cannot play ranked vs yourself", 400)
   session['game_id'] = room
   session['game_type'] = 'ranked'
   print("Setting session game_id in join_ranked")
@@ -255,8 +281,9 @@ def on_join_ranked():
 def on_join_friendly():
   print("On join friendly")
   room = give_room('friendly', db)
-  # socket_room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", room)
-  # join_room(socket_room[0]['game_id'])
+  if room = -1:
+    return apology("Cannot play friendly vs yourself", 400)
+
   session['game_id'] = room
   session['game_type'] = 'friendly'
   print("Setting session game_id in join friendly")
@@ -294,9 +321,9 @@ def on_join_bot():
 
   if 'user_id' in session:
     elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"])
-    db.execute("INSERT INTO games (player1_id, player1_elo, game_type, player2_id, player2_elo, gameid_of_gametype) VALUES (?, ?, ?, ?, ?, ?)", session["user_id"], elo[0]["elo"], 'bot', 0, 800, room)
+    db.execute("INSERT INTO games (player1_id, player1_elo, game_type, player2_id, player2_elo, gameid_of_gametype, time) VALUES (?, ?, ?, ?, ?, ?, ?)", session["user_id"], elo[0]["elo"], 'bot', 0, 800, room, datetime.now())
   else:
-    db.execute("INSERT INTO games (player1_id, player1_elo, game_type, player2_id, player2_elo, gameid_of_gametype) VALUES (?, ?, ?, ?, ?, ?)", -1, 800, 'bot', 0, 800, room)
+    db.execute("INSERT INTO games (player1_id, player1_elo, game_type, player2_id, player2_elo, gameid_of_gametype, time) VALUES (?, ?, ?, ?, ?, ?, ?)", -1, 800, 'bot', 0, 800, room, datetime.now())
   
   session['game_id'] = room
   session['game_type'] = 'bot'
@@ -418,6 +445,15 @@ def friend_list():
   friends = db.execute("SELECT l.friends_id AS fid, u.elo AS felo, u.username AS fusername FROM friends_list AS l INNER JOIN user AS u ON l.friends_id = u.id WHERE l.list_owner_id = ?", session['user_id'])
   # here there should be some innerjoins too
   return render_template('friendlist.html', friends=friends)  
+
+
+@app.route('/leaderboard')
+def leaderboard():
+  leaders = db.execute("SELECT id, elo, username FROM user ORDER BY elo DESC LIMIT 5")
+  # maybe in the future also ordered by the number of games
+  # and also show the number of games
+  # that will be interesting to do a bit later, needs 2 joins again and then order by the sum of both somehow
+  return render_template('leaderboard.html', leaders=leaders)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():  
@@ -582,8 +618,9 @@ def in_game(game_id, type):
         return render_template('with_a_friend_ingame.html')
         
       elif game[0]['player2_id'] is None:
+        # here the same player cannot enter as the second player
         elo = db.execute("SELECT * FROM user WHERE id = ?", session['user_id'])
-        db.execute("UPDATE games SET player2_id = ? player2_elo = ? WHERE gameid_of_gametype = ? AND game_type = ?", session['user_id'], elo[0]['elo'], game_id, type)
+        db.execute("UPDATE games SET player2_id = ?, player2_elo = ?, time = ? WHERE gameid_of_gametype = ? AND game_type = ?", session['user_id'], elo[0]['elo'], datetime.now(), game_id, type)
         return render_template('with_a_friend_ingame.html')
 
       else:
@@ -593,8 +630,11 @@ def in_game(game_id, type):
       # if one is not logged in they can only access this game as the second player
       if game[0]['player2_id'] is None:
         db.execute("UPDATE games SET player2_id = ? player2_elo = ? WHERE gameid_of_gametype = ? AND game_type = ?", -1, 800, game_id, type)
+        # give them a default user_id for later uses 
+        session['user_id'] = -1
         # set the session game_id for later use
         session['game_id'] = game_id
+        
         return render_template('with_a_friend_ingame.html')
       else:
         return apology("Game is in progress or already finished", 400)

@@ -1,185 +1,194 @@
 {% extends "layout.html" %}
 {% block script %}
-{{ super() }}
-<script>
-  document.addEventListener("DOMContentLoaded", function(){
+  {{ super() }}
+  <script>
+    document.addEventListener("DOMContentLoaded", function(){
 
-    var socket = io.connect("http://127.0.0.1:5000");
-    
-    window.onbeforeunload = function(){
-      socket.emit("player disconnected");
-      console.log("player disconnected emitting");
-      return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
-    }
-    
-    var button = document.querySelector('#button');
-    var text = document.querySelector('#text');
-    var number = document.querySelector('#num');
-    var waiting = document.querySelector('#waiting');
-    var cont = document.querySelector('#container')
-    cont.style.display = 'none';
-
-
-    // for checking if it's the first number given by the player
-    var first ="";
-
-    button.disabled = true;
-
-    number.onkeydown = function() {
-    var key = event.keyCode || event.charCode;
-
-    if( key == 8 || key == 46 )
-        return button.disabled = true;
-        // if the user deletes a character, then there wouldn't be 4 numbers so we disable to button.
-    };
+      var socket = io.connect("http://127.0.0.1:5000");
+      
+      window.onbeforeunload = function(){
+        socket.emit("player disconnected");
+        console.log("player disconnected emitting");
+        return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
+      }
+      
+      var button = document.querySelector('#button');
+      var text = document.querySelector('#text');
+      var number = document.querySelector('#num');
+      var waiting = document.querySelector('#waiting');
+      var cont = document.querySelector('#container')
+      cont.style.display = 'none';
 
 
-    socket.on('connect', () =>{
-      // alert('connection event');
-      socket.emit("Get numbers of players");
+      // for checking if it's the first number given by the player
+      var first ="";
+
+      button.disabled = true;
+
+      number.onkeydown = function() {
+      var key = event.keyCode || event.charCode;
+
+      if( key == 8 || key == 46 )
+          return button.disabled = true;
+          // if the user deletes a character, then there wouldn't be 4 numbers so we disable to button.
+      };
+
+
+      socket.on('connect', () =>{
+        // alert('connection event');
+        socket.emit("Get numbers of players");
+      });
+
+      socket.on('disconnect', () =>{
+        console.log("player disconnected emitting");
+        socket.emit('player disconnected');
+        // maybe i just can't emit anything in the disconnnect event cause by the time it fired the connection has been nulled
+      });
+
+      socket.on("numbers selected", (data) =>{
+        alert('numbers selected');
+        if (data['sid of the second'] == socket.id){
+          text.innerHTML = "Numbers have been selected. Your opponent starts first.";
+        }
+        else {
+          number.disabled = false;
+          text.innerHTML = "Numbers have been selected. You start first. Make your guess for your opponent's number";
+        }
+      });
+
+      socket.on('game_start', () =>{
+        alert("Changing the display values");
+        cont.style.display = 'block';
+        waiting.style.display = 'none';
+      });
+
+      socket.on('game_over', (data) =>{
+        if (data['winner_sid'] == socket.id)
+          if ('elo_won' in data){
+            alert("Congratulations, you have guessed your opponent's number and won the game! You have won " + data['elo_won'].toString() + " elo.");
+          }
+          else{
+            alert("Congratulations! You have guessed your opponent's number and won the game!");
+          }
+        else {
+          // a little strange that on the loser nothing get's alerted but overall great
+          if ('elo_lost' in data){
+            alert("Your opponent has guessed your number and you have lost the game. You have lost " + data['elo_lost'].toString() + " elo.");
+          }
+          else{
+            alert("Your opponent has guessed your number and you have lost the game.");
+          }
+        }
+        window.onbeforeunload = null;
+        window.location.replace("{{ url_for('home') }}");
+      });
+
+
+      socket.on('guess_result', (data) =>{
+        if(data['result_from_sid'] == socket.id){
+          text.innerHTML = "You have a few second to think while your opponent makes their guess.";
+          number.disabled = true;
+          button.disabled = true; 
+          var user_history = document.createElement('li');
+          user_history.appendChild(document.createTextNode("Your guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
+          document.querySelector('#user_history').appendChild(user_history);
+        }
+        else {
+          text.innerHTML = "Input your guess for your opponent's number.";
+          number.disabled = false;
+          var opponent_history = document.createElement('li');
+          opponent_history.appendChild(document.createTextNode("Opponent's guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
+          document.querySelector('#opponent_history').appendChild(opponent_history);
+        }
+      });    
+
+      button.addEventListener('click', function(){
+        let num = number.value;
+        number.value = "";
+        // if we have changed the text from the inital text 
+        // then that means we have submitted the first number already
+
+        console.log(first);
+        // this is a bit of a weird way to do it but its what i thought of and i 
+        // can't seem to think of anything better rn
+        if (first != "First number"){
+          first = "First number";
+          text.innerHTML = "Wait for your opponent to select their number";
+          button.disabled = true;  
+          number.disabled = true;
+          socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'False'});
+        }
+
+        else{
+          text.innerHTML = "You have a few second to think while your opponent makes their guess.";
+          button.disabled = true;
+          number.disabled = true;
+          socket.emit('number_received', {'number': num, 'first': 'Not First'});
+        }
+
+      });
     });
 
-    socket.on('disconnect', () =>{
-      console.log("player disconnected emitting");
-      socket.emit('player disconnected');
-      // maybe i just can't emit anything in the disconnnect event cause by the time it fired the connection has been nulled
-    });
+    function validateNum(e) {
 
-    socket.on("numbers selected", (data) =>{
-      alert('numbers selected');
-      if (data['sid of the second'] == socket.id){
-        text.innerHTML = "Numbers have been selected. Your opponent starts first.";
+      var keynum;
+      
+      if(window.event) { // IE                  
+        keynum = e.keyCode;
+      } else if(e.which){ // Netscape/Firefox/Opera                 
+        keynum = e.which;
       }
-      else {
-        number.disabled = false;
-        text.innerHTML = "Numbers have been selected. You start first. Make your guess for your opponent's number";
-      }
-    });
+      
+      let newnum = String.fromCharCode(keynum);
 
-    socket.on('game_start', () =>{
-      alert("Changing the display values");
-      cont.style.display = 'block';
-      waiting.style.display = 'none';
-    });
-
-    socket.on('game_over', (data) =>{
-      if (data['winner_sid'] == socket.id)
-        alert("Congratulations! You have guessed your opponent's number and won the game!");
-      else {
-        // a little strange that on the loser nothing get's alerted but overall great
-        alert("Your opponent has guessed your number and you have lost the game.");
-      }
-      window.onbeforeunload = null;
-      window.location.replace("{{ url_for('home') }}");
-    });
-
-
-    socket.on('guess_result', (data) =>{
-      if(data['result_from_sid'] == socket.id){
-        text.innerHTML = "You have a few second to think while your opponent makes their guess.";
-        number.disabled = true;
-        button.disabled = true; 
-        var user_history = document.createElement('li');
-        user_history.appendChild(document.createTextNode("Your guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
-        document.querySelector('#user_history').appendChild(user_history);
-      }
-      else {
-        text.innerHTML = "Input your guess for your opponent's number.";
-        number.disabled = false;
-        var opponent_history = document.createElement('li');
-        opponent_history.appendChild(document.createTextNode("Opponent's guess is " + data['bulls'] + " Bulls and " + data['cows'] + " Cows"));
-        document.querySelector('#opponent_history').appendChild(opponent_history);
-      }
-    });    
-
-    button.addEventListener('click', function(){
-      let num = number.value;
-      number.value = "";
-      // if we have changed the text from the inital text 
-      // then that means we have submitted the first number already
-
-      console.log(first);
-      // this is a bit of a weird way to do it but its what i thought of and i 
-      // can't seem to think of anything better rn
-      if (first != "First number"){
-        first = "First number";
-        text.innerHTML = "Wait for your opponent to select their number";
-        button.disabled = true;  
-        number.disabled = true;
-        socket.emit('number_received', {'number': num, 'first': first, 'is_bot_game': 'False'});
-      }
-
-      else{
-        text.innerHTML = "You have a few second to think while your opponent makes their guess.";
-        button.disabled = true;
-        number.disabled = true;
-        socket.emit('number_received', {'number': num, 'first': 'Not First'});
-      }
-
-    });
-  });
-
-  function validateNum(e) {
-
-    var keynum;
-    
-    if(window.event) { // IE                  
-      keynum = e.keyCode;
-    } else if(e.which){ // Netscape/Firefox/Opera                 
-      keynum = e.which;
-    }
-    
-    let newnum = String.fromCharCode(keynum);
-
-    if (isNaN(newnum)){
-      // alert("Non numeric value");
-      // if the new character is not numeric don't accept it
-      return false;
-    }
-
-    let x = document.getElementById('num').value;    
-    for (let i = 0; i < x.length; i++){
-      if (x[i] === newnum)
+      if (isNaN(newnum)){
+        // alert("Non numeric value");
+        // if the new character is not numeric don't accept it
         return false;
-    }
+      }
 
-    if(x.length == 3)
-    document.querySelector('#button').disabled = false;
-  };
+      let x = document.getElementById('num').value;    
+      for (let i = 0; i < x.length; i++){
+        if (x[i] === newnum)
+          return false;
+      }
 
-  
-</script>
+      if(x.length == 3)
+      document.querySelector('#button').disabled = false;
+    };
+    
+  </script>
 {% endblock %}
 {% block title %}
 {% endblock %}
 {% block main %}
 
-<button id="waiting" class="btn btn-primary" type="button">
-  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-  Waiting for a second player...
-</button>
+  <button id="waiting" class="btn btn-primary" type="button">
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    Waiting for a second player...
+  </button>
 
-<div id="container" class="container text-center">
-  <div class="row">
-    <div class="col">
-      <span></span>
-      <h4> History of your opponent's guesses:</h4>
-      <ol id="opponent_history"></ol>
-    </div>
-    <div class="col-7">
-      <div id="choosing-numbers">
-        <h3 id="text">Choose you number. It must be a 4 digit number with no dublicating digits. Leading zeros are allowed.</h3>
+  <div id="container" class="container text-center">
+    <div class="row">
+      <div class="col">
         <span></span>
-        <input id="num" type="text" minlength="4" maxlength="4" required autocomplete="off" onkeypress="return validateNum(event)">
-        <button type="button" id="button">Submit</button>
-        <p id="space"></p>
+        <h4> History of your opponent's guesses:</h4>
+        <ol id="opponent_history"></ol>
+      </div>
+      <div class="col-7">
+        <div id="choosing-numbers">
+          <h3 id="text">Choose you number. It must be a 4 digit number with no dublicating digits. Leading zeros are allowed.</h3>
+          <span></span>
+          <input id="num" type="text" minlength="4" maxlength="4" required autocomplete="off" onkeypress="return validateNum(event)">
+          <button type="button" id="button">Submit</button>
+          <p id="space"></p>
+        </div>
+      </div>
+      <div class="col">
+        <span></span>
+        <h4>History of your guesses: </h4>
+        <ol id="user_history"></ol>
       </div>
     </div>
-    <div class="col">
-      <span></span>
-      <h4>History of your guesses: </h4>
-      <ol id="user_history"></ol>
-    </div>
   </div>
-</div>
 {% endblock %}

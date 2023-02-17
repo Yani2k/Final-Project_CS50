@@ -1,22 +1,48 @@
 {% extends "layout.html" %}
 {% block title %}
-Friends List
+  Friends List
 {% endblock %}
 {% block main %}
-{% if friends|length == 0 %}
-<p> Friends list is currently empty. Add people for them to show up here</p>
-{% else %}
-<ol>
-  {% for friend in friends %}
-  <li>
-    <a href="{{ url_for('profile', user_id=friend['fid']) }}">{{ friend['fusername'] }}</a>
-    ---- {{ friend['felo'] }} elo.
-    <form action="{{ url_for('friend_list') }}" method="post">
-      <input type = "hidden" name = "friend_id_remove" value = "{{ friend['fid'] }}" />
-      <button class="btn btn-primary" type="submit">Remove from friend list.</button>
-    </form>
-  </li>
-  {% endfor %}
-</ol>
-{% endif %}
+  {% if friends|length == 0 %}
+    <p> Friends list is currently empty. Add people for them to show up here</p>
+  {% else %}
+    <!-- <ol>
+      {% for friend in friends %}
+      <li>
+        <a href="{{ url_for('profile', user_id=friend['fid']) }}">{{ friend['fusername'] }}</a>
+        ---- {{ friend['felo'] }} elo.
+        <form action="{{ url_for('friend_list') }}" method="post">
+          <input type = "hidden" name = "friend_id_remove" value = "{{ friend['fid'] }}" />
+          <button class="btn btn-primary" type="submit">Remove from friend list.</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ol> -->
+    <h2>Friends</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Friend </th>
+          <th> Elo </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for friend in friends %}
+          <tr>
+            <td>
+              <a href="{{ url_for('profile', user_id=friend['fid']) }}">{{ friend['fusername'] }}</a>
+            </td>
+            <td>{{ friend['felo'] }}</td>
+            <td>
+              <form action="{{ url_for('friend_list') }}" method="post">
+              <input type = "hidden" name = "friend_id_remove" value = "{{ friend['fid'] }}" />
+              <button class="btn btn-primary" type="submit">Remove from friend list.</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 {% endblock %}

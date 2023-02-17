@@ -35,7 +35,7 @@
         <a class="nav-link text-dark" href="{{ url_for('about') }}">About</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-dark" href="#">Leaderboard</a>
+        <a class="nav-link text-dark" href="{{ url_for('leaderboard') }}">Leaderboard</a>
       </li>
       {% if session["user_id"] and session["user_id"] != -1 %}
         <li class="nav-item dropdown ms-auto">
