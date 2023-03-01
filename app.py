@@ -12,6 +12,7 @@ from time import time
 import jwt
 from flask_socketio import SocketIO, send, emit, rooms, join_room, leave_room
 from datetime import datetime
+import pyperclip
 
 app = Flask(__name__)
 
@@ -50,6 +51,8 @@ def get_players():
   print(request.sid)
   print(session)
   full = False
+  if 'game_type' not in session:
+    session['game_type'] = 'with_friend'
   room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ? AND game_type = ?", session['game_id'], session['game_type'])
   join_room(room[0]['game_id'])
   socket_room = db.execute("SELECT * FROM socket_rooms WHERE room_id = ?", room[0]['game_id'])
@@ -89,9 +92,14 @@ def get_players():
 #   if 'game_type' in session:
 #     session.pop('game_type', None)
     
+@socketio.on("player disconnected 2")
+def on_player_discon():
+  print("player disconnected 2")
+    
+    
 @socketio.on("player disconnected")
 def on_player_disconnected():
-  # maybe here it will work out ...
+  # maybe here it will work out ... # sometimes it does interestingly enough. Idk when why, why not
   print("on player disconnected")
   # room = db.execute("SELECT * FROM games WHERE gameid_of_gametype = ?", session['game_id']) here needs to be added also game_type if we ever come back to it
   # to_clear = db.execute("SELECT * FROM socket_rooms WHERE room_id = ?", room[0]['game_id'])
@@ -282,6 +290,7 @@ def on_join_ranked():
   print("Setting session game_id in join_ranked")
   game_url = url_for('in_game', game_id=room, type='ranked')
   emit('game_link', {'url': game_url}, to=request.sid)
+  # return redirect(game_url)
   
   
 @socketio.on('join_friendly')
@@ -296,6 +305,7 @@ def on_join_friendly():
   print("Setting session game_id in join friendly")
   game_url = url_for('in_game', game_id=room, type='friendly')
   emit('game_link', {'url': game_url}, to=request.sid)
+  # return redirect(game_url)
   
   
 @socketio.on('join_with_friend')
@@ -304,7 +314,7 @@ def on_join_with_friend():
   last_active_game = db.execute("SELECT * FROM games WHERE game_type = 'with_friend' ORDER BY gameid_of_gametype DESC LIMIT 1")
   elo = db.execute("SELECT * FROM user WHERE id = ?", session["user_id"])
   room = 1
-  if len(last_active_game != 0):
+  if len(last_active_game) != 0:
     room = last_active_game[0]['gameid_of_gametype'] + 1
   
   db.execute("INSERT INTO games (player1_id, player1_elo, game_type, gameid_of_gametype) VALUES (?, ?, ?, ?)", session["user_id"], elo[0]["elo"], 'with_friend', room)
@@ -313,8 +323,13 @@ def on_join_with_friend():
   session['game_id'] = room
   session['game_type'] = 'with_friend'
   print("Setting session game_id in join with friend")
-  game_url = url_for('in_game', game_id=room, type='with_friend')
-  emit('game_link', {'url': game_url, "clipboard": True}, to=request.sid)
+  game_url = url_for('in_game', game_id=room, type='with_friend', _external=True)
+  # now it's the correct url, but it doesnt add it to clipboard still
+  print(game_url)
+  emit('game_link', {'url': game_url}, to=request.sid)
+  pyperclip.copy(game_url)
+  # return redirect(game_url)
+
   
   
 @socketio.on('join_bot')
@@ -339,6 +354,7 @@ def on_join_bot():
   # But is it worth it to separate them that much. Plus i've already started implementing it with websocket so that's that
   game_url = url_for('in_game', game_id=room, type='bot')
   emit('game_link', {'url': game_url}, to=request.sid)
+  # return redirect(game_url)
       
 
 # a helping function that's not in helpers cause it needs current session information
@@ -435,8 +451,11 @@ def profile(user_id):
   user = db.execute("SELECT * FROM user WHERE id = ?", user_id)
   if len(user) == 0:
     return apology("There is no such user!", 403)
-   
-  data = db.execute("SELECT u1.username AS username1, u1.id AS id1, u1.elo AS elo1, u2.username AS username2, u2.id AS id2, u2.elo AS elo2, w.username AS winner_username, g.winner_id AS winners_id FROM games AS g INNER JOIN user AS u1 ON g.player1_id = u1.id INNER JOIN user AS u2 ON g.player2_id = u2.id INNER JOIN user AS w ON g.winner_id = w.id WHERE g.player1_id = ? OR g.player2_id = ?", user_id, user_id)
+  
+  # I can do it with an if but is that the best way?
+  # I can't actually do it with an if, cause it's different for every game
+  # What happens here to the other info if one of the data is unavailable? 
+  data = db.execute("SELECT g.game_type AS type, g.time AS game_time, u1.username AS username1, u1.id AS id1, u1.elo AS elo1, u2.username AS username2, u2.id AS id2, u2.elo AS elo2, w.username AS winner_username, g.winner_id AS winners_id FROM games AS g INNER JOIN user AS u1 ON g.player1_id = u1.id INNER JOIN user AS u2 ON g.player2_id = u2.id INNER JOIN user AS w ON g.winner_id = w.id WHERE g.player1_id = ? OR g.player2_id = ?", user_id, user_id)
   # games = db.execute("SELECT * FROM games WHERE player1_id = ? OR player2_id = ?",user_id, user_id)
   elo = db.execute("SELECT * FROM user WHERE id = ?", user_id)
   friends = db.execute("SELECT * FROM friends_list WHERE list_owner_id = ? AND friends_id = ?", session['user_id'], user_id)
@@ -618,6 +637,7 @@ def in_game(game_id, type):
     return render_template('bot_ingame.html') 
   
   if type == 'with_friend':
+    print('with_friend')
     # if the game is full, only works for this type of game though
     # cause the other types of games have both players in the database
     # by this point
@@ -629,6 +649,8 @@ def in_game(game_id, type):
         # here the same player cannot enter as the second player
         elo = db.execute("SELECT * FROM user WHERE id = ?", session['user_id'])
         db.execute("UPDATE games SET player2_id = ?, player2_elo = ?, time = ? WHERE gameid_of_gametype = ? AND game_type = ?", session['user_id'], elo[0]['elo'], datetime.now(), game_id, type)
+        session['game_id'] = game_id
+        session['game_type'] = 'with_friend'
         return render_template('with_a_friend_ingame.html')
 
       else:
@@ -637,11 +659,12 @@ def in_game(game_id, type):
     else:
       # if one is not logged in they can only access this game as the second player
       if game[0]['player2_id'] is None:
-        db.execute("UPDATE games SET player2_id = ? player2_elo = ? WHERE gameid_of_gametype = ? AND game_type = ?", -1, 800, game_id, type)
+        db.execute("UPDATE games SET player2_id = ?, player2_elo = ?, time = ? WHERE gameid_of_gametype = ? AND game_type = ?", -1, 800, datetime.now(), game_id, type)
         # give them a default user_id for later uses 
         session['user_id'] = -1
         # set the session game_id for later use
         session['game_id'] = game_id
+        session['game_type'] = 'with_friend'
         
         return render_template('with_a_friend_ingame.html')
       else:

@@ -5,7 +5,13 @@ elo FLOAT(6,2) NOT NULL);
 .schema
 
 SELECT * FROM user;
-
+INSERT INTO user (id, username, elo, hash) VALUES (0, 'BOT', 800, '0');
+INSERT INTO user (id, username, elo, hash) VALUES (-1, 'UNLOGGED', 800, '0');
+UPDATE user SET elo = 800 WHERE id = 0;
+UPDATE USER SET elo = 800 WHERE id = -1;
+-- if the bot game or the game isn't finished, it doesnt't show up in the history
+-- if that how i want it or should we think up a fix
+-- yeah this will be a feature for now..
 -- DELETE FROM user;
 
 CREATE TABLE games (game_id INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT NOT NULL, player1_id INTEGER, player1_elo SMALLINT, player2_id INTEGER, player2_elo SMALLINT, winner_id INTEGER, time DATETIME);
@@ -66,3 +72,10 @@ ALTER TABLE socket_rooms ADD player2_id INTEGER;
 CREATE TABLE friends_list (id INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT NOT NULL, list_owner_id INTEGER, friends_id INTEGER);
 
 SELECT * FROM friends_list;
+
+
+-- so it doesnt give any of the bot games because they lack some of the wanted fusions
+-- I could easily make a placeholder profile for the bot and the
+-- unlogged to solve this issue, idk if it's the most elegant
+-- solution though
+SELECT g.game_type AS type, g.time AS game_time, u1.username AS username1, u1.id AS id1, u1.elo AS elo1, u2.username AS username2, u2.id AS id2, u2.elo AS elo2, w.username AS winner_username, g.winner_id AS winners_id FROM games AS g INNER JOIN user AS u1 ON g.player1_id = u1.id INNER JOIN user AS u2 ON g.player2_id = u2.id INNER JOIN user AS w ON g.winner_id = w.id WHERE g.player1_id = 18 OR g.player2_id = 18;

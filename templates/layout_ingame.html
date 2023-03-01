@@ -7,8 +7,14 @@
       var socket = io.connect("http://127.0.0.1:5000");
       
       window.onbeforeunload = function(){
-        socket.emit("player disconnected");
-        console.log("player disconnected emitting");
+        // when the console log is before the emit, it gets loggen in the console
+        // when it's after the emit it doesn't get logged ? why?
+        // the socket event is literally just a print ?? 
+        socket.emit("player disconnected 2");
+        console.log("player disconnected 2 emitting");
+        // now it console logged it but didn't go into the python function. Instead
+        // it printed the on player disconnected from the other disconnect for some reason
+        // even though i hadnt stopped the service neither had i closed the page or went off it?
         return "Are you sure you want to close the window?"; // Alert the user when they refresh as that will discard information
       }
       
@@ -46,7 +52,7 @@
       });
 
       socket.on("numbers selected", (data) =>{
-        alert('numbers selected');
+        // alert('numbers selected');
         if (data['sid of the second'] == socket.id){
           text.innerHTML = "Numbers have been selected. Your opponent starts first.";
         }
@@ -57,30 +63,33 @@
       });
 
       socket.on('game_start', () =>{
-        alert("Changing the display values");
+        alert("Game start!");
         cont.style.display = 'block';
         waiting.style.display = 'none';
       });
 
       socket.on('game_over', (data) =>{
         if (data['winner_sid'] == socket.id)
-          if ('elo_won' in data){
-            alert("Congratulations, you have guessed your opponent's number and won the game! You have won " + data['elo_won'].toString() + " elo.");
-          }
-          else{
-            alert("Congratulations! You have guessed your opponent's number and won the game!");
-          }
-        else {
+        if ('elo_won' in data){
+          alert("Congratulations, you have guessed your opponent's number and won the game! You have won " + data['elo_won'].toString() + " elo.");
+        }
+        else{
+          alert("Congratulations! You have guessed your opponent's number and won the game!");
+        }
+        else {    
           // a little strange that on the loser nothing get's alerted but overall great
+          // I think the loser doesn't get it cause the page gets changed beforehand or cancels it for some reason.
+          // nah the loser still doesnt come here
+          // and it redirects immediately
           if ('elo_lost' in data){
             alert("Your opponent has guessed your number and you have lost the game. You have lost " + data['elo_lost'].toString() + " elo.");
           }
-          else{
-            alert("Your opponent has guessed your number and you have lost the game.");
+          else {
+          alert("Your opponent has guessed your number and you have lost the game.");
           }
         }
         window.onbeforeunload = null;
-        window.location.replace("{{ url_for('home') }}");
+        window.location.replace("{{ url_for('home') }}");          
       });
 
 
@@ -129,6 +138,7 @@
       });
     });
 
+    
     function validateNum(e) {
 
       var keynum;

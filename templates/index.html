@@ -8,16 +8,14 @@
     
     socket.on('game_link', function(data){
       window.location = data['url'];
-      if (data['clipboard'] == true){
-        navigator.clipboard.writeText(data['url']);
-      }
+
     });
 
     let rankedgame = document.querySelector("#ranked");
     if (rankedgame){
       rankedgame.addEventListener("click", function(){
         // socket.emit('join_game', {game_type: ranked})
-        alert("Ranked game!");
+        // alert("Ranked game!");
         socket.emit("join_ranked");
       });
     }
@@ -25,7 +23,7 @@
     let friendlygame = document.querySelector("#friendly");
     if (friendlygame){
       friendlygame.addEventListener("click", function(){
-        alert("Friendly game!");
+        // alert("Friendly game!");
         socket.emit("join_friendly");
       });
     }
@@ -33,7 +31,7 @@
     let withfriend = document.querySelector("#with_friend");
     if (withfriend){
       withfriend.addEventListener("click", function(){
-        alert("Game with a friend!");
+        // alert("Game with a friend!");
         socket.emit("join_with_friend");
       });
     }
@@ -41,7 +39,7 @@
     var botgame = document.querySelector(".bot");
     if (botgame){
       botgame.addEventListener("click", function(){
-        alert("Game with a bot!");
+        // alert("Game with a bot!");
         socket.emit("join_bot");
       });
     }
@@ -57,7 +55,7 @@
 
   <p class="spacer"></p>
 
-  {% if session["user_id"] %}
+  {% if session["user_id"] and session["user_id"] != -1 %}
     <div>
       <button class="btn btn-primary btn-light" id="ranked">Ranked Game</button>
     </div>

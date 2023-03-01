@@ -23,9 +23,11 @@
 
     <span></span>
 
+    <!-- possibly also record the elo changes in some way -->
   <table class="table">
     <thead>
       <tr>
+        <th> Game Type</th>
         <th> First player </th>
         <th> First player elo </th>
         <th> Second player </th>
@@ -37,15 +39,37 @@
     <tbody>
       {% for game in data %}
         <tr>
-          <td>{{ game['username1'] }}</td>
+          <td>{{ game['type'] }}</td>
+          {% if game['id1'] == 0 %}
+            <td> Bot </td>
+          {% elif game['id1'] == -1 %}
+            <td> Unlogged User </td>
+          {% else %}
+            <td><a href="{{ url_for('profile', user_id=game['id1']) }}"> {{ game['username1'] }} </a></td>
+          {% endif %}
           <td>{{ game['elo1'] }}</td>
           <!-- if the game hasn't fired it will give a mistake cause there won't be a second player, just like it gives a mistake when there hasn't been a recorded winner -->
-          <td>{{ game['username2'] }} </td>
-          <td>{{ game['elo2'] }}</td>
-          {% if game['winner_id'] %}
-          <td><a href="{{ url_for('profile', user_id=game['winners_id']) }}"> {{ game['winner_username'] }}</a></td>
+          {% if game['id2'] == 0 %}
+            <td> Bot </td>
+          {% elif game['id2'] == -1 %}
+            <td> Unlogged User </td>
           {% else %}
-          <td> No winner recorded.</td>
+            <td><a href="{{ url_for('profile', user_id=game['id2']) }}"> {{ game['username2'] }} </a></td>
+          {% endif %}
+          <td>{{ game['elo2'] }}</td>
+          {% if game['winners_id'] is defined %}
+            {% if game['winners_id'] == 0 %}
+              <td> The Bot </td>
+            {% elif game['winners_id'] == -1 %}
+              <td> The Unlogged User </td>
+            {% else %}
+              <td><a href="{{ url_for('profile', user_id=game['winners_id']) }}"> {{ game['winner_username'] }}</a></td>
+            {% endif %}
+          {% else %}
+            <td> No winner recorded.</td>
+          {% endif %}
+          {% if game['game_time'] %}
+            <td>{{ game['game_time'] }}</td>
           {% endif %}
         </tr>
       {% endfor %}

@@ -68,7 +68,7 @@ template inheritance -->
         number.disabled = true;
       }
       button.disabled = true;
-      alert("Emitting number_received event");
+      // alert("Emitting number_received event");
       socket.emit('number_received', {'number': num, 'first': first});
 
     });
